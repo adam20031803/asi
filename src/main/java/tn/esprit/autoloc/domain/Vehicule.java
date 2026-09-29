@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Table(name = "vehicule")
@@ -39,4 +40,26 @@ public class Vehicule {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StatutVehicule statut;
+
+    // Plusieurs véhicules appartiennent à une agence
+    @ManyToOne
+    @JoinColumn(name = "agence_id")
+    private Agence agence;
+
+    // Un véhicule peut avoir plusieurs maintenances
+    @OneToMany(mappedBy = "vehicule", cascade = CascadeType.ALL)
+    private List<Maintenance> maintenances;
+
+    // Un véhicule peut avoir plusieurs réservations
+    @OneToMany(mappedBy = "vehicule", cascade = CascadeType.ALL)
+    private List<Reservation> reservations;
+
+    // Plusieurs véhicules peuvent avoir plusieurs équipements (ManyToMany)
+    @ManyToMany
+    @JoinTable(
+        name = "vehicule_equipement",
+        joinColumns = @JoinColumn(name = "vehicule_id"),
+        inverseJoinColumns = @JoinColumn(name = "equipement_id")
+    )
+    private List<Equipement> equipements;
 }

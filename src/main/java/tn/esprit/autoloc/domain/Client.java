@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "client")
@@ -37,4 +38,8 @@ public class Client {
 
     @Column(nullable = false)
     private LocalDate dateInscription;
+
+    // Un client peut avoir plusieurs réservations
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL)
+    private List<Reservation> reservations;
 }

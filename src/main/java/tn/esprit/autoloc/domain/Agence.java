@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Entity
 @Table(name = "agence")
 @Getter
@@ -29,4 +31,12 @@ public class Agence {
 
     @Column(nullable = false, length = 20)
     private String telephone;
+
+    // Une agence peut avoir plusieurs employés
+    @OneToMany(mappedBy = "agence", cascade = CascadeType.ALL)
+    private List<Employe> employes;
+
+    // Une agence peut gérer plusieurs véhicules
+    @OneToMany(mappedBy = "agence", cascade = CascadeType.ALL)
+    private List<Vehicule> vehicules;
 }

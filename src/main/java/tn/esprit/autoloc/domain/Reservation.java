@@ -29,4 +29,18 @@ public class Reservation {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StatutReservation statut;
+
+    // Plusieurs réservations appartiennent à un client
+    @ManyToOne
+    @JoinColumn(name = "client_id")
+    private Client client;
+
+    // Plusieurs réservations concernent un véhicule
+    @ManyToOne
+    @JoinColumn(name = "vehicule_id")
+    private Vehicule vehicule;
+
+    // Une réservation donne lieu à un contrat (OneToOne)
+    @OneToOne(mappedBy = "reservation", cascade = CascadeType.ALL)
+    private Contrat contrat;
 }
