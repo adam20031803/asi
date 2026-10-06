@@ -3,5 +3,11 @@ package tn.esprit.autoloc.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import tn.esprit.autoloc.domain.Equipement;
 
+import java.util.Optional;
+
 public interface IEquipementRepository extends JpaRepository<Equipement, Long> {
+
+    Optional<Equipement> findByLibelleIgnoreCase(String libelle);
+
+    boolean existsByLibelleIgnoreCase(String libelle);
 }
