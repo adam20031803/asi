@@ -24,6 +24,9 @@ public class EmployeServiceImpl implements IEmployeService {
         if (employe == null) {
             throw new BusinessException("Les données de l'employé ne peuvent pas être nulles");
         }
+        if (employe.getIdEmploye() != null) {
+            throw new BusinessException("L'identifiant de l'employé est généré automatiquement : il ne doit pas être fourni à la création");
+        }
         return employeRepository.save(employe);
     }
 

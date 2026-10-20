@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.autoloc.domain.Maintenance;
 import tn.esprit.autoloc.domain.StatutVehicule;
+import tn.esprit.autoloc.domain.Vehicule;
 import tn.esprit.autoloc.exception.BusinessException;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
 import tn.esprit.autoloc.repository.IMaintenanceRepository;
@@ -32,9 +33,14 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
         if (maintenance.getDateFin().isBefore(maintenance.getDateDebut())) {
             throw new BusinessException("La date de fin ne peut pas être antérieure à la date de début");
         }
+        if (maintenance.getIdMaintenance() != null) {
+            throw new BusinessException("L'identifiant de la maintenance est généré automatiquement : il ne doit pas être fourni à la création");
+        }
         if (maintenance.getVehicule() != null) {
-            maintenance.getVehicule().setStatut(StatutVehicule.MAINTENANCE);
-            vehiculeRepository.save(maintenance.getVehicule());
+            // Le corps ne contient que l'identifiant du véhicule : on charge le véhicule complet avant de le modifier
+            Vehicule vehicule = findVehicule(maintenance.getVehicule().getIdVehicule());
+            vehicule.setStatut(StatutVehicule.MAINTENANCE);
+            maintenance.setVehicule(vehicule);
         }
         return maintenanceRepository.save(maintenance);
     }
@@ -58,7 +64,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
             existingMaintenance.setDescription(updatedMaintenance.getDescription());
         }
         if (updatedMaintenance.getVehicule() != null) {
-            existingMaintenance.setVehicule(updatedMaintenance.getVehicule());
+            existingMaintenance.setVehicule(findVehicule(updatedMaintenance.getVehicule().getIdVehicule()));
         }
 
         return maintenanceRepository.save(existingMaintenance);
@@ -89,5 +95,13 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
     @Transactional(readOnly = true)
     public List<Maintenance> getMaintenancesByVehicule(Long idVehicule) {
         return maintenanceRepository.findByVehicule_IdVehicule(idVehicule);
+    }
+
+    private Vehicule findVehicule(Long idVehicule) {
+        if (idVehicule == null) {
+            throw new BusinessException("L'identifiant du véhicule est obligatoire");
+        }
+        return vehiculeRepository.findById(idVehicule)
+                .orElseThrow(() -> new ResourceNotFoundException("Véhicule introuvable avec l'identifiant : " + idVehicule));
     }
 }

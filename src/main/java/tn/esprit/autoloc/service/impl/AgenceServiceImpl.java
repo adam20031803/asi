@@ -23,6 +23,13 @@ public class AgenceServiceImpl implements IAgenceService {
         if (agence == null) {
             throw new BusinessException("Les informations de l'agence ne peuvent pas être nulles");
         }
+        if (agence.getIdAgence() != null) {
+            throw new BusinessException("L'identifiant de l'agence est généré automatiquement : il ne doit pas être fourni à la création");
+        }
+        if (isBlank(agence.getNom()) || isBlank(agence.getVille())
+                || isBlank(agence.getAdresse()) || isBlank(agence.getTelephone())) {
+            throw new BusinessException("Le nom, la ville, l'adresse et le téléphone de l'agence sont obligatoires");
+        }
         return agenceRepository.save(agence);
     }
 
@@ -74,5 +81,9 @@ public class AgenceServiceImpl implements IAgenceService {
     @Transactional(readOnly = true)
     public List<Agence> getAgencesByVille(String ville) {
         return agenceRepository.findByVilleIgnoreCase(ville);
+    }
+
+    private static boolean isBlank(String valeur) {
+        return valeur == null || valeur.isBlank();
     }
 }

@@ -27,6 +27,9 @@ public class ReservationServiceImpl implements IReservationService {
         if (reservation == null) {
             throw new BusinessException("Les données de la réservation ne peuvent pas être nulles");
         }
+        if (reservation.getIdReservation() != null) {
+            throw new BusinessException("L'identifiant de la réservation est généré automatiquement : il ne doit pas être fourni à la création");
+        }
         if (reservation.getDateDebut() == null || reservation.getDateFin() == null) {
             throw new BusinessException("Les dates de début et de fin sont obligatoires");
         }

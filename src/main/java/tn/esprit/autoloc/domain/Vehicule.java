@@ -1,5 +1,6 @@
 package tn.esprit.autoloc.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -48,10 +49,12 @@ public class Vehicule {
 
     // Un véhicule peut avoir plusieurs maintenances
     @OneToMany(mappedBy = "vehicule", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Maintenance> maintenances;
 
     // Un véhicule peut avoir plusieurs réservations
     @OneToMany(mappedBy = "vehicule", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Reservation> reservations;
 
     // Plusieurs véhicules peuvent avoir plusieurs équipements (ManyToMany)

@@ -27,6 +27,9 @@ public class ContratServiceImpl implements IContratService {
         if (contrat == null) {
             throw new BusinessException("Les données du contrat ne peuvent pas être nulles");
         }
+        if (contrat.getIdContrat() != null) {
+            throw new BusinessException("L'identifiant du contrat est généré automatiquement : il ne doit pas être fourni à la création");
+        }
         if (contrat.getDateSignature() == null) {
             contrat.setDateSignature(LocalDate.now());
         }
@@ -36,6 +39,8 @@ public class ContratServiceImpl implements IContratService {
         if (contrat.getPaiements() == null) {
             contrat.setPaiements(new ArrayList<>());
         }
+        // Chaque paiement doit référencer son contrat (côté propriétaire de la relation)
+        contrat.getPaiements().forEach(paiement -> paiement.setContrat(contrat));
         return contratRepository.save(contrat);
     }
 
@@ -79,10 +84,13 @@ public class ContratServiceImpl implements IContratService {
 
     @Override
     public void deleteContrat(Long id) {
-        if (!contratRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Impossible de supprimer : aucun contrat avec l'identifiant : " + id);
+        Contrat contrat = contratRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Impossible de supprimer : aucun contrat avec l'identifiant : " + id));
+        // Détacher la réservation (cascade ALL côté Reservation) pour qu'elle ne re-persiste pas le contrat supprimé
+        if (contrat.getReservation() != null) {
+            contrat.getReservation().setContrat(null);
         }
-        contratRepository.deleteById(id);
+        contratRepository.delete(contrat);
     }
 
     @Override

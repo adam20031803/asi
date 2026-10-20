@@ -30,6 +30,9 @@ public class VehiculeServiceImpl implements IVehiculeService {
         if (vehicule == null) {
             throw new BusinessException("Les données du véhicule ne peuvent pas être nulles");
         }
+        if (vehicule.getIdVehicule() != null) {
+            throw new BusinessException("L'identifiant du véhicule est généré automatiquement : il ne doit pas être fourni à la création");
+        }
         if (vehicule.getImmatriculation() != null && vehiculeRepository.existsByImmatriculation(vehicule.getImmatriculation())) {
             throw new BusinessException("Un véhicule avec l'immatriculation '" + vehicule.getImmatriculation() + "' existe déjà");
         }

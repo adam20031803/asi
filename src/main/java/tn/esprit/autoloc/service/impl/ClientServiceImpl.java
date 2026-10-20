@@ -24,6 +24,13 @@ public class ClientServiceImpl implements IClientService {
         if (client == null) {
             throw new BusinessException("Les informations du client ne peuvent pas être nulles");
         }
+        if (client.getIdClient() != null) {
+            throw new BusinessException("L'identifiant du client est généré automatiquement : il ne doit pas être fourni à la création");
+        }
+        if (isBlank(client.getNom()) || isBlank(client.getPrenom())
+                || isBlank(client.getEmail()) || isBlank(client.getNumPermis())) {
+            throw new BusinessException("Le nom, le prénom, l'email et le numéro de permis du client sont obligatoires");
+        }
         if (client.getEmail() != null && clientRepository.existsByEmail(client.getEmail())) {
             throw new BusinessException("Un client avec l'email '" + client.getEmail() + "' existe déjà");
         }
@@ -103,5 +110,9 @@ public class ClientServiceImpl implements IClientService {
     public Client getClientByNumPermis(String numPermis) {
         return clientRepository.findByNumPermis(numPermis)
                 .orElseThrow(() -> new ResourceNotFoundException("Aucun client trouvé avec le permis : " + numPermis));
+    }
+
+    private static boolean isBlank(String valeur) {
+        return valeur == null || valeur.isBlank();
     }
 }

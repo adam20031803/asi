@@ -23,6 +23,12 @@ public class EquipementServiceImpl implements IEquipementService {
         if (equipement == null) {
             throw new BusinessException("Les données de l'équipement ne peuvent pas être nulles");
         }
+        if (equipement.getIdEquipement() != null) {
+            throw new BusinessException("L'identifiant de l'équipement est généré automatiquement : il ne doit pas être fourni à la création");
+        }
+        if (equipement.getLibelle() == null || equipement.getLibelle().isBlank()) {
+            throw new BusinessException("Le libellé de l'équipement est obligatoire");
+        }
         if (equipement.getLibelle() != null && equipementRepository.existsByLibelleIgnoreCase(equipement.getLibelle())) {
             throw new BusinessException("Un équipement avec le libellé '" + equipement.getLibelle() + "' existe déjà");
         }
@@ -36,6 +42,9 @@ public class EquipementServiceImpl implements IEquipementService {
         }
         Equipement existingEquipement = getEquipementById(id);
 
+        if (updatedEquipement.getLibelle() != null && updatedEquipement.getLibelle().isBlank()) {
+            throw new BusinessException("Le libellé de l'équipement ne peut pas être vide");
+        }
         if (updatedEquipement.getLibelle() != null &&
                 !updatedEquipement.getLibelle().equalsIgnoreCase(existingEquipement.getLibelle())) {
             if (equipementRepository.existsByLibelleIgnoreCase(updatedEquipement.getLibelle())) {

@@ -1,5 +1,6 @@
 package tn.esprit.autoloc.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -34,9 +35,11 @@ public class Agence {
 
     // Une agence peut avoir plusieurs employés
     @OneToMany(mappedBy = "agence", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Employe> employes;
 
     // Une agence peut gérer plusieurs véhicules
     @OneToMany(mappedBy = "agence", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Vehicule> vehicules;
 }
