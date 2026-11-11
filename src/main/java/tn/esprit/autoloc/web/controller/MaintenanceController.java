@@ -5,21 +5,18 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Maintenance;
 import tn.esprit.autoloc.service.IMaintenanceService;
+import tn.esprit.autoloc.web.dto.MaintenanceRequest;
+import tn.esprit.autoloc.web.dto.MaintenanceResponse;
+import tn.esprit.autoloc.web.mapper.MaintenanceMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "Maintenances", description = "Gestion des maintenances des véhicules")
 @RestController
@@ -28,12 +25,15 @@ import java.util.List;
 public class MaintenanceController {
 
     private final IMaintenanceService maintenanceService;
+    private final MaintenanceMapper maintenanceMapper;
 
     @Operation(summary = "Lister les maintenances")
     @ApiResponse(responseCode = "200", description = "Liste renvoyée (éventuellement vide)")
     @GetMapping
-    public List<Maintenance> findAll() {
-        return maintenanceService.getAllMaintenances();
+    public List<MaintenanceResponse> findAll() {
+        return maintenanceService.getAllMaintenances().stream()
+                .map(maintenanceMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Operation(summary = "Consulter une maintenance")
@@ -42,31 +42,37 @@ public class MaintenanceController {
             @ApiResponse(responseCode = "404", description = "Maintenance introuvable")
     })
     @GetMapping("/{id}")
-    public Maintenance findById(@Parameter(description = "Identifiant de la maintenance") @PathVariable Long id) {
-        return maintenanceService.getMaintenanceById(id);
+    public MaintenanceResponse findById(
+            @Parameter(description = "Identifiant de la maintenance") @PathVariable Long id) {
+        return maintenanceMapper.toResponse(maintenanceService.getMaintenanceById(id));
     }
 
-    @Operation(summary = "Créer une maintenance", description = "L'identifiant est généré : il ne doit pas figurer dans le corps.")
+    @Operation(summary = "Créer une maintenance",
+               description = "L'identifiant est généré automatiquement. Le véhicule passe automatiquement au statut MAINTENANCE.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Maintenance créée"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (date de fin antérieure à la date de début, véhicule manquant)")
+            @ApiResponse(responseCode = "400", description = "Données invalides (date de fin antérieure à la date de début, véhicule introuvable)")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Maintenance create(@RequestBody Maintenance maintenance) {
-        return maintenanceService.createMaintenance(maintenance);
+    public MaintenanceResponse create(@Valid @RequestBody MaintenanceRequest dto) {
+        Maintenance maintenance = maintenanceMapper.toEntity(dto);
+        return maintenanceMapper.toResponse(maintenanceService.createMaintenance(maintenance));
     }
 
-    @Operation(summary = "Modifier une maintenance", description = "Seuls les attributs modifiables non nuls du corps sont recopiés.")
+    @Operation(summary = "Modifier une maintenance",
+               description = "Seuls les champs non nuls du corps sont recopiés.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Maintenance modifiée"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (date de fin antérieure à la date de début, véhicule manquant)"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
             @ApiResponse(responseCode = "404", description = "Maintenance introuvable")
     })
     @PutMapping("/{id}")
-    public Maintenance update(@Parameter(description = "Identifiant de la maintenance") @PathVariable Long id,
-                      @RequestBody Maintenance maintenance) {
-        return maintenanceService.updateMaintenance(id, maintenance);
+    public MaintenanceResponse update(
+            @Parameter(description = "Identifiant de la maintenance") @PathVariable Long id,
+            @Valid @RequestBody MaintenanceRequest dto) {
+        Maintenance maintenance = maintenanceMapper.toEntity(dto);
+        return maintenanceMapper.toResponse(maintenanceService.updateMaintenance(id, maintenance));
     }
 
     @Operation(summary = "Supprimer une maintenance")
@@ -76,7 +82,8 @@ public class MaintenanceController {
     })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteById(@Parameter(description = "Identifiant de la maintenance") @PathVariable Long id) {
+    public void deleteById(
+            @Parameter(description = "Identifiant de la maintenance") @PathVariable Long id) {
         maintenanceService.deleteMaintenance(id);
     }
 }

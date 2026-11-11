@@ -5,21 +5,18 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Client;
 import tn.esprit.autoloc.service.IClientService;
+import tn.esprit.autoloc.web.dto.ClientRequest;
+import tn.esprit.autoloc.web.dto.ClientResponse;
+import tn.esprit.autoloc.web.mapper.ClientMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "Clients", description = "Gestion des clients")
 @RestController
@@ -28,12 +25,15 @@ import java.util.List;
 public class ClientController {
 
     private final IClientService clientService;
+    private final ClientMapper clientMapper;
 
     @Operation(summary = "Lister les clients")
     @ApiResponse(responseCode = "200", description = "Liste renvoyée (éventuellement vide)")
     @GetMapping
-    public List<Client> findAll() {
-        return clientService.getAllClients();
+    public List<ClientResponse> findAll() {
+        return clientService.getAllClients().stream()
+                .map(clientMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Operation(summary = "Consulter un client")
@@ -42,31 +42,37 @@ public class ClientController {
             @ApiResponse(responseCode = "404", description = "Client introuvable")
     })
     @GetMapping("/{id}")
-    public Client findById(@Parameter(description = "Identifiant du client") @PathVariable Long id) {
-        return clientService.getClientById(id);
+    public ClientResponse findById(
+            @Parameter(description = "Identifiant du client") @PathVariable Long id) {
+        return clientMapper.toResponse(clientService.getClientById(id));
     }
 
-    @Operation(summary = "Créer un client", description = "L'identifiant est généré : il ne doit pas figurer dans le corps.")
+    @Operation(summary = "Créer un client",
+               description = "L'identifiant est généré automatiquement. La date d'inscription est fixée à aujourd'hui.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Client créé"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (attribut d'identification vide, email ou permis déjà utilisé)")
+            @ApiResponse(responseCode = "400", description = "Données invalides (email ou permis déjà utilisé, champ obligatoire manquant)")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Client create(@RequestBody Client client) {
-        return clientService.createClient(client);
+    public ClientResponse create(@Valid @RequestBody ClientRequest dto) {
+        Client client = clientMapper.toEntity(dto);
+        return clientMapper.toResponse(clientService.createClient(client));
     }
 
-    @Operation(summary = "Modifier un client", description = "Seuls les attributs modifiables non nuls du corps sont recopiés.")
+    @Operation(summary = "Modifier un client",
+               description = "Seuls les champs non nuls du corps sont recopiés.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Client modifié"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (attribut d'identification vide, email ou permis déjà utilisé)"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
             @ApiResponse(responseCode = "404", description = "Client introuvable")
     })
     @PutMapping("/{id}")
-    public Client update(@Parameter(description = "Identifiant du client") @PathVariable Long id,
-                      @RequestBody Client client) {
-        return clientService.updateClient(id, client);
+    public ClientResponse update(
+            @Parameter(description = "Identifiant du client") @PathVariable Long id,
+            @Valid @RequestBody ClientRequest dto) {
+        Client client = clientMapper.toEntity(dto);
+        return clientMapper.toResponse(clientService.updateClient(id, client));
     }
 
     @Operation(summary = "Supprimer un client")
@@ -76,7 +82,8 @@ public class ClientController {
     })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteById(@Parameter(description = "Identifiant du client") @PathVariable Long id) {
+    public void deleteById(
+            @Parameter(description = "Identifiant du client") @PathVariable Long id) {
         clientService.deleteClient(id);
     }
 }

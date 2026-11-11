@@ -5,21 +5,18 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Contrat;
 import tn.esprit.autoloc.service.IContratService;
+import tn.esprit.autoloc.web.dto.ContratRequest;
+import tn.esprit.autoloc.web.dto.ContratResponse;
+import tn.esprit.autoloc.web.mapper.ContratMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "Contrats", description = "Gestion des contrats de location")
 @RestController
@@ -28,12 +25,15 @@ import java.util.List;
 public class ContratController {
 
     private final IContratService contratService;
+    private final ContratMapper contratMapper;
 
     @Operation(summary = "Lister les contrats")
     @ApiResponse(responseCode = "200", description = "Liste renvoyée (éventuellement vide)")
     @GetMapping
-    public List<Contrat> findAll() {
-        return contratService.getAllContrats();
+    public List<ContratResponse> findAll() {
+        return contratService.getAllContrats().stream()
+                .map(contratMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Operation(summary = "Consulter un contrat")
@@ -42,31 +42,37 @@ public class ContratController {
             @ApiResponse(responseCode = "404", description = "Contrat introuvable")
     })
     @GetMapping("/{id}")
-    public Contrat findById(@Parameter(description = "Identifiant du contrat") @PathVariable Long id) {
-        return contratService.getContratById(id);
+    public ContratResponse findById(
+            @Parameter(description = "Identifiant du contrat") @PathVariable Long id) {
+        return contratMapper.toResponse(contratService.getContratById(id));
     }
 
-    @Operation(summary = "Créer un contrat", description = "L'identifiant est généré : il ne doit pas figurer dans le corps.")
+    @Operation(summary = "Créer un contrat",
+               description = "L'identifiant est généré automatiquement. La date de signature est fixée à aujourd'hui si absente.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Contrat créé"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (identifiant fourni, montant négatif, JSON mal formé)")
+            @ApiResponse(responseCode = "400", description = "Données invalides (montant négatif, réservation introuvable)")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Contrat create(@RequestBody Contrat contrat) {
-        return contratService.createContrat(contrat);
+    public ContratResponse create(@Valid @RequestBody ContratRequest dto) {
+        Contrat contrat = contratMapper.toEntity(dto);
+        return contratMapper.toResponse(contratService.createContrat(contrat));
     }
 
-    @Operation(summary = "Modifier un contrat", description = "Seuls les attributs modifiables non nuls du corps sont recopiés.")
+    @Operation(summary = "Modifier un contrat",
+               description = "Seuls les champs non nuls du corps sont recopiés.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Contrat modifié"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (identifiant fourni, montant négatif, JSON mal formé)"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
             @ApiResponse(responseCode = "404", description = "Contrat introuvable")
     })
     @PutMapping("/{id}")
-    public Contrat update(@Parameter(description = "Identifiant du contrat") @PathVariable Long id,
-                      @RequestBody Contrat contrat) {
-        return contratService.updateContrat(id, contrat);
+    public ContratResponse update(
+            @Parameter(description = "Identifiant du contrat") @PathVariable Long id,
+            @Valid @RequestBody ContratRequest dto) {
+        Contrat contrat = contratMapper.toEntity(dto);
+        return contratMapper.toResponse(contratService.updateContrat(id, contrat));
     }
 
     @Operation(summary = "Supprimer un contrat")
@@ -76,7 +82,8 @@ public class ContratController {
     })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteById(@Parameter(description = "Identifiant du contrat") @PathVariable Long id) {
+    public void deleteById(
+            @Parameter(description = "Identifiant du contrat") @PathVariable Long id) {
         contratService.deleteContrat(id);
     }
 }

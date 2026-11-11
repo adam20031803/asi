@@ -5,21 +5,18 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Vehicule;
 import tn.esprit.autoloc.service.IVehiculeService;
+import tn.esprit.autoloc.web.dto.VehiculeRequest;
+import tn.esprit.autoloc.web.dto.VehiculeResponse;
+import tn.esprit.autoloc.web.mapper.VehiculeMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "Véhicules", description = "Gestion du parc de véhicules")
 @RestController
@@ -28,12 +25,15 @@ import java.util.List;
 public class VehiculeController {
 
     private final IVehiculeService vehiculeService;
+    private final VehiculeMapper vehiculeMapper;
 
     @Operation(summary = "Lister les véhicules")
     @ApiResponse(responseCode = "200", description = "Liste renvoyée (éventuellement vide)")
     @GetMapping
-    public List<Vehicule> findAll() {
-        return vehiculeService.getAllVehicules();
+    public List<VehiculeResponse> findAll() {
+        return vehiculeService.getAllVehicules().stream()
+                .map(vehiculeMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Operation(summary = "Consulter un véhicule")
@@ -42,31 +42,37 @@ public class VehiculeController {
             @ApiResponse(responseCode = "404", description = "Véhicule introuvable")
     })
     @GetMapping("/{id}")
-    public Vehicule findById(@Parameter(description = "Identifiant du véhicule") @PathVariable Long id) {
-        return vehiculeService.getVehiculeById(id);
+    public VehiculeResponse findById(
+            @Parameter(description = "Identifiant du véhicule") @PathVariable Long id) {
+        return vehiculeMapper.toResponse(vehiculeService.getVehiculeById(id));
     }
 
-    @Operation(summary = "Créer un véhicule", description = "L'identifiant est généré : il ne doit pas figurer dans le corps.")
+    @Operation(summary = "Créer un véhicule",
+               description = "L'identifiant est généré automatiquement. Le statut par défaut est DISPONIBLE.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Véhicule créé"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (tarif négatif ou nul, immatriculation déjà utilisée)")
+            @ApiResponse(responseCode = "400", description = "Données invalides (tarif invalide, immatriculation déjà utilisée)")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Vehicule create(@RequestBody Vehicule vehicule) {
-        return vehiculeService.createVehicule(vehicule);
+    public VehiculeResponse create(@Valid @RequestBody VehiculeRequest dto) {
+        Vehicule vehicule = vehiculeMapper.toEntity(dto);
+        return vehiculeMapper.toResponse(vehiculeService.createVehicule(vehicule));
     }
 
-    @Operation(summary = "Modifier un véhicule", description = "Seuls les attributs modifiables non nuls du corps sont recopiés.")
+    @Operation(summary = "Modifier un véhicule",
+               description = "Seuls les champs non nuls du corps sont recopiés.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Véhicule modifié"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (tarif négatif ou nul, immatriculation déjà utilisée)"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
             @ApiResponse(responseCode = "404", description = "Véhicule introuvable")
     })
     @PutMapping("/{id}")
-    public Vehicule update(@Parameter(description = "Identifiant du véhicule") @PathVariable Long id,
-                      @RequestBody Vehicule vehicule) {
-        return vehiculeService.updateVehicule(id, vehicule);
+    public VehiculeResponse update(
+            @Parameter(description = "Identifiant du véhicule") @PathVariable Long id,
+            @Valid @RequestBody VehiculeRequest dto) {
+        Vehicule vehicule = vehiculeMapper.toEntity(dto);
+        return vehiculeMapper.toResponse(vehiculeService.updateVehicule(id, vehicule));
     }
 
     @Operation(summary = "Supprimer un véhicule")
@@ -76,7 +82,8 @@ public class VehiculeController {
     })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteById(@Parameter(description = "Identifiant du véhicule") @PathVariable Long id) {
+    public void deleteById(
+            @Parameter(description = "Identifiant du véhicule") @PathVariable Long id) {
         vehiculeService.deleteVehicule(id);
     }
 }

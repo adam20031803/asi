@@ -5,21 +5,18 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Employe;
 import tn.esprit.autoloc.service.IEmployeService;
+import tn.esprit.autoloc.web.dto.EmployeRequest;
+import tn.esprit.autoloc.web.dto.EmployeResponse;
+import tn.esprit.autoloc.web.mapper.EmployeMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "Employés", description = "Gestion des employés des agences")
 @RestController
@@ -28,12 +25,15 @@ import java.util.List;
 public class EmployeController {
 
     private final IEmployeService employeService;
+    private final EmployeMapper employeMapper;
 
     @Operation(summary = "Lister les employés")
     @ApiResponse(responseCode = "200", description = "Liste renvoyée (éventuellement vide)")
     @GetMapping
-    public List<Employe> findAll() {
-        return employeService.getAllEmployes();
+    public List<EmployeResponse> findAll() {
+        return employeService.getAllEmployes().stream()
+                .map(employeMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Operation(summary = "Consulter un employé")
@@ -42,31 +42,37 @@ public class EmployeController {
             @ApiResponse(responseCode = "404", description = "Employé introuvable")
     })
     @GetMapping("/{id}")
-    public Employe findById(@Parameter(description = "Identifiant de l'employé") @PathVariable Long id) {
-        return employeService.getEmployeById(id);
+    public EmployeResponse findById(
+            @Parameter(description = "Identifiant de l'employé") @PathVariable Long id) {
+        return employeMapper.toResponse(employeService.getEmployeById(id));
     }
 
-    @Operation(summary = "Créer un employé", description = "L'identifiant est généré : il ne doit pas figurer dans le corps.")
+    @Operation(summary = "Créer un employé",
+               description = "L'identifiant est généré automatiquement.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Employé créé"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (identifiant fourni, rôle inconnu, JSON mal formé)")
+            @ApiResponse(responseCode = "400", description = "Données invalides (rôle inconnu, champ obligatoire manquant)")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Employe create(@RequestBody Employe employe) {
-        return employeService.createEmploye(employe);
+    public EmployeResponse create(@Valid @RequestBody EmployeRequest dto) {
+        Employe employe = employeMapper.toEntity(dto);
+        return employeMapper.toResponse(employeService.createEmploye(employe));
     }
 
-    @Operation(summary = "Modifier un employé", description = "Seuls les attributs modifiables non nuls du corps sont recopiés.")
+    @Operation(summary = "Modifier un employé",
+               description = "Seuls les champs non nuls du corps sont recopiés.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Employé modifié"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (identifiant fourni, rôle inconnu, JSON mal formé)"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
             @ApiResponse(responseCode = "404", description = "Employé introuvable")
     })
     @PutMapping("/{id}")
-    public Employe update(@Parameter(description = "Identifiant de l'employé") @PathVariable Long id,
-                      @RequestBody Employe employe) {
-        return employeService.updateEmploye(id, employe);
+    public EmployeResponse update(
+            @Parameter(description = "Identifiant de l'employé") @PathVariable Long id,
+            @Valid @RequestBody EmployeRequest dto) {
+        Employe employe = employeMapper.toEntity(dto);
+        return employeMapper.toResponse(employeService.updateEmploye(id, employe));
     }
 
     @Operation(summary = "Supprimer un employé")
@@ -76,7 +82,8 @@ public class EmployeController {
     })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteById(@Parameter(description = "Identifiant de l'employé") @PathVariable Long id) {
+    public void deleteById(
+            @Parameter(description = "Identifiant de l'employé") @PathVariable Long id) {
         employeService.deleteEmploye(id);
     }
 }
