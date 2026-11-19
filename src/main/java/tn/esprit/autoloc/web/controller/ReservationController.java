@@ -13,6 +13,8 @@ import tn.esprit.autoloc.domain.Reservation;
 import tn.esprit.autoloc.service.IReservationService;
 import tn.esprit.autoloc.web.dto.ReservationRequest;
 import tn.esprit.autoloc.web.dto.ReservationResponse;
+import tn.esprit.autoloc.web.dto.ReservationResponseDTO;
+import tn.esprit.autoloc.web.dto.ReservationWithContratRequestDTO;
 import tn.esprit.autoloc.web.mapper.ReservationMapper;
 
 import java.util.List;
@@ -85,5 +87,33 @@ public class ReservationController {
     public void deleteById(
             @Parameter(description = "Identifiant de la réservation") @PathVariable Long id) {
         reservationService.deleteReservation(id);
+    }
+
+    // ── Services d'affectation ─────────────────────────────────────────────
+
+    @Operation(summary = "Affecter une réservation à un client par nom/prénom")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Réservation affectée au client"),
+            @ApiResponse(responseCode = "404", description = "Réservation ou client introuvable")
+    })
+    @PutMapping("/{id}/affecter-client")
+    public ReservationResponseDTO affecterClient(
+            @Parameter(description = "Identifiant de la réservation") @PathVariable Long id,
+            @RequestParam String nom,
+            @RequestParam String prenom) {
+        return reservationService.affecterReservationAClient(id, nom, prenom);
+    }
+
+    @Operation(summary = "Créer une réservation et son contrat associé en une seule opération")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Réservation et contrat créés"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
+            @ApiResponse(responseCode = "404", description = "Véhicule introuvable")
+    })
+    @PostMapping("/avec-contrat")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReservationResponseDTO creerAvecContrat(
+            @Valid @RequestBody ReservationWithContratRequestDTO dto) {
+        return reservationService.creerReservationEtContratAssocie(dto);
     }
 }

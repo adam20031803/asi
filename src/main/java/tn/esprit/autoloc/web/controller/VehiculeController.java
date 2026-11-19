@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Vehicule;
 import tn.esprit.autoloc.service.IVehiculeService;
+import tn.esprit.autoloc.web.dto.VehiculeDTO;
 import tn.esprit.autoloc.web.dto.VehiculeRequest;
 import tn.esprit.autoloc.web.dto.VehiculeResponse;
 import tn.esprit.autoloc.web.mapper.VehiculeMapper;
@@ -85,5 +86,31 @@ public class VehiculeController {
     public void deleteById(
             @Parameter(description = "Identifiant du véhicule") @PathVariable Long id) {
         vehiculeService.deleteVehicule(id);
+    }
+
+    // ── Services d'affectation ─────────────────────────────────────────────
+
+    @Operation(summary = "Affecter un équipement à un véhicule (retourne VehiculeDTO enrichi)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Équipement affecté"),
+            @ApiResponse(responseCode = "404", description = "Véhicule ou équipement introuvable")
+    })
+    @PutMapping("/{idVehicule}/affecter-equipement/{idEquipement}")
+    public VehiculeDTO affecterEquipement(
+            @Parameter(description = "Identifiant du véhicule")    @PathVariable Long idVehicule,
+            @Parameter(description = "Identifiant de l'équipement") @PathVariable Long idEquipement) {
+        return vehiculeService.affecterVehiculeAEquipement(idVehicule, idEquipement);
+    }
+
+    @Operation(summary = "Affecter une maintenance à un véhicule par immatriculation")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Maintenance créée, véhicule en statut MAINTENANCE"),
+            @ApiResponse(responseCode = "404", description = "Véhicule introuvable")
+    })
+    @PostMapping("/affecter-maintenance")
+    public VehiculeDTO affecterMaintenance(
+            @RequestParam String description,
+            @RequestParam String immatriculation) {
+        return vehiculeService.affecterMaintenanceAVehicule(description, immatriculation);
     }
 }

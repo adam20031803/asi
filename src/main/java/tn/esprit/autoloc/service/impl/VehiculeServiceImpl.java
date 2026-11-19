@@ -5,17 +5,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.autoloc.domain.CategorieVehicule;
 import tn.esprit.autoloc.domain.Equipement;
+import tn.esprit.autoloc.domain.Maintenance;
 import tn.esprit.autoloc.domain.StatutVehicule;
 import tn.esprit.autoloc.domain.Vehicule;
 import tn.esprit.autoloc.exception.BusinessException;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
 import tn.esprit.autoloc.repository.IEquipementRepository;
+import tn.esprit.autoloc.repository.IMaintenanceRepository;
 import tn.esprit.autoloc.repository.IVehiculeRepository;
 import tn.esprit.autoloc.service.IVehiculeService;
+import tn.esprit.autoloc.web.dto.VehiculeDTO;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -24,6 +30,7 @@ public class VehiculeServiceImpl implements IVehiculeService {
 
     private final IVehiculeRepository vehiculeRepository;
     private final IEquipementRepository equipementRepository;
+    private final IMaintenanceRepository maintenanceRepository;
 
     @Override
     public Vehicule createVehicule(Vehicule vehicule) {
@@ -166,5 +173,59 @@ public class VehiculeServiceImpl implements IVehiculeService {
             vehicule.getEquipements().remove(equipement);
         }
         return vehiculeRepository.save(vehicule);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Services d'affectation
+    // ═════════════════════════════════════════════════════════════════════════
+
+    @Override
+    public VehiculeDTO affecterVehiculeAEquipement(Long idVehicule, Long idEquipement) {
+        // Réutilise la logique existante, puis projette en DTO
+        Vehicule vehicule = affecterEquipement(idVehicule, idEquipement);
+        return toVehiculeDTO(vehicule);
+    }
+
+    @Override
+    public VehiculeDTO affecterMaintenanceAVehicule(String description, String immatriculation) {
+        // 1. Trouver le véhicule par immatriculation
+        Vehicule vehicule = getVehiculeByImmatriculation(immatriculation);
+
+        // 2. Créer et persister la maintenance
+        Maintenance maintenance = new Maintenance();
+        maintenance.setDateDebut(LocalDate.now());
+        maintenance.setDateFin(LocalDate.now().plusDays(1));
+        maintenance.setDescription(description);
+        maintenance.setVehicule(vehicule);
+        maintenanceRepository.save(maintenance);
+
+        // 3. Mettre à jour le statut du véhicule
+        vehicule.setStatut(StatutVehicule.MAINTENANCE);
+        vehicule = vehiculeRepository.save(vehicule);
+
+        return toVehiculeDTO(vehicule);
+    }
+
+    // ── Helper de mapping ─────────────────────────────────────────────────────
+
+    private VehiculeDTO toVehiculeDTO(Vehicule v) {
+        List<String> equipements = v.getEquipements() == null ? Collections.emptyList()
+                : v.getEquipements().stream()
+                        .map(Equipement::getLibelle)
+                        .collect(Collectors.toList());
+        int nbMaintenances = v.getMaintenances() == null ? 0 : v.getMaintenances().size();
+        return VehiculeDTO.builder()
+                .idVehicule(v.getIdVehicule())
+                .immatriculation(v.getImmatriculation())
+                .marque(v.getMarque())
+                .modele(v.getModele())
+                .categorie(v.getCategorie())
+                .tarifJournalier(v.getTarifJournalier())
+                .statut(v.getStatut())
+                .agenceId(v.getAgence() != null ? v.getAgence().getIdAgence() : null)
+                .agenceNom(v.getAgence() != null ? v.getAgence().getNom() : null)
+                .equipements(equipements)
+                .nombreMaintenances(nbMaintenances)
+                .build();
     }
 }

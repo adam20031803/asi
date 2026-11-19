@@ -7,14 +7,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Contrat;
 import tn.esprit.autoloc.service.IContratService;
+import tn.esprit.autoloc.web.dto.ContratDTO;
 import tn.esprit.autoloc.web.dto.ContratRequest;
 import tn.esprit.autoloc.web.dto.ContratResponse;
 import tn.esprit.autoloc.web.mapper.ContratMapper;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -85,5 +88,26 @@ public class ContratController {
     public void deleteById(
             @Parameter(description = "Identifiant du contrat") @PathVariable Long id) {
         contratService.deleteContrat(id);
+    }
+
+    // ── Service d'affectation ──────────────────────────────────────────────
+
+    @Operation(summary = "Créer un contrat et l'affecter à une réservation EN_ATTENTE",
+               description = "Recherche la première réservation EN_ATTENTE dont les dates correspondent, crée le contrat et passe la réservation en CONFIRMEE.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Contrat créé et affecté"),
+            @ApiResponse(responseCode = "400", description = "Un contrat existe déjà pour cette réservation"),
+            @ApiResponse(responseCode = "404", description = "Aucune réservation EN_ATTENTE trouvée pour ces dates")
+    })
+    @PostMapping("/affecter-reservation")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ContratDTO affecterContratAReservation(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateSignature,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin) {
+        return contratService.affecterContratAReservation(dateSignature, dateDebut, dateFin);
     }
 }
