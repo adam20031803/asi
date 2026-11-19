@@ -45,4 +45,11 @@ public interface IVehiculeService {
      * met le véhicule en statut MAINTENANCE et retourne le VehiculeDTO mis à jour.
      */
     VehiculeDTO affecterMaintenanceAVehicule(String description, String immatriculation);
+
+    /**
+     * Alias respectant la casse exacte : affecterMaintenanceAvehicule.
+     */
+    default VehiculeDTO affecterMaintenanceAvehicule(String description, String immatriculation) {
+        return affecterMaintenanceAVehicule(description, immatriculation);
+    }
 }
